@@ -165,7 +165,7 @@ def start():
             recording = 0;
             record.kill()
             board.digital_write(LED_Record, 0)
-            myMQTTClient.subscribe("$aws/things/NUC-Gateway/shadow/update/accepted", 1, customCallback)
+            
             alexa()
 
 
@@ -173,7 +173,8 @@ if __name__ == "__main__":
 
     board.digital_write(LED_Status, 0)
     board.digital_write(LED_Record, 0)
-
+    myMQTTClient.subscribe("$aws/things/NUC-Gateway/shadow/update/accepted", 1, customCallback)
+    
     while internet_on() == False:
         print "."
     token = gettoken()
