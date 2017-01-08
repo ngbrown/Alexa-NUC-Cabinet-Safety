@@ -1,7 +1,7 @@
 'use strict';
 var config = {};
 
-config.IOT_BROKER_ENDPOINT      = "REST_API_ENDPOINT".toLowerCase();
+config.IOT_BROKER_ENDPOINT      = "a1am3uuthfk12b.iot.us-east-1.amazonaws.com".toLowerCase();
 
 config.IOT_BROKER_REGION        = "us-east-1";
 
@@ -17,8 +17,8 @@ AWS.config.region = config.IOT_BROKER_REGION;
 var iotData = new AWS.IotData({endpoint: config.IOT_BROKER_ENDPOINT});
 
 var Alexa = require('alexa-sdk');
-var APP_ID = undefined; //OPTIONAL: replace with 'amzn1.echo-sdk-ams.app.[your-unique-value-here]';
-var SKILL_NAME = 'gateway demo';
+var APP_ID = "amzn1.ask.skill.a94b19dd-d720-4970-bb79-a86d7991eca9"; //OPTIONAL: replace with 'amzn1.echo-sdk-ams.app.[your-unique-value-here]';
+var SKILL_NAME = 'Cabinet Gateway Skill';
 
 exports.handler = function(event, context, callback) {
     var alexa = Alexa.handler(event, context);
@@ -36,11 +36,9 @@ var handlers = {
       var deviceState = [
         {"state":{ "desired":{"device":"NUC-Gateway","red_led":0,"blue_led":0}}}
       ];
-      var speechOutput="Gateway Operational";
-      AWSIoT.sendMessage(this, deviceState,speechOutput);
-
+      this.emit(":ask", "what cabinet would you like to unlock?", "you can say things like, the kitchen sink cabinet, or the laundry cabinet");
     },
-    'DeviceStateIntent': function () {
+    'UnlockIntent': function () {
 
       var speechOutput;
       var itemSlot = this.event.request.intent.slots.DeviceState;
@@ -53,62 +51,68 @@ var handlers = {
       var deviceState=null;
 
       switch (Device_States) {
-        case "all on":
-        blue_state = 1;
-        red_state = 1;
-        deviceState = [
-        {'state':{ 'desired':{'device':'NUC-Gateway','red_led':red_state,'blue_led':blue_state}}}
-        ];
-        speechOutput="all on";
-        break;
-        case "all off":
-        blue_state = 0;
-        red_state = 0;
-        deviceState = [
-        {'state':{ 'desired':{'device':'NUC-Gateway','red_led':red_state,'blue_led':blue_state}}}
-        ];
-        speechOutput="all off";
-        break;
-        case "blue led on":
-        blue_state = 1;
-        deviceState = [
-        {'state':{ 'desired':{'device':'NUC-Gateway','red_led':red_state,'blue_led':blue_state}}}
-        ];
-        speechOutput="blue L E D on";
-        break;
-        case "red led on":
-        red_state = 1;
-        deviceState = [
-        {'state':{ 'desired':{'device':'NUC-Gateway','red_led':red_state,'blue_led':blue_state}}}
-        ];
-        speechOutput="red L E D on";
-        break;
+        case "kitchen cabinet":
+          blue_state = 1;
+          deviceState = [
+          {'state':{ 'desired':{'device':'NUC-Gateway','red_led':red_state,'blue_led':blue_state}}}
+          ];
+          speechOutput="kitchen cabinet now unlocked";
+          break;
+        case "laundry room cabinet":
+          red_state = 1;
+          deviceState = [
+          {'state':{ 'desired':{'device':'NUC-Gateway','red_led':red_state,'blue_led':blue_state}}}
+          ];
+          speechOutput="laundry cabinet now unlocked";
+          break;
         case "none":
         default:
-        speechOutput="no device state";
-        break;
-        case "red led off":
-        red_state = 0;
-        deviceState = [
-        {'state':{ 'desired':{'device':'NUC-Gateway','red_led':red_state,'blue_led':blue_state}}}
-        ];
-        speechOutput="red L E D off";
-        break;
-        case "blue led off":
-        blue_state = 0;
-        deviceState = [
-        {'state':{ 'desired':{'device':'NUC-Gateway','red_led':red_state,'blue_led':blue_state}}}
-        ];
-        speechOutput="blue L E D off";
-        break;
+          speechOutput="ok, goodbye";
+          break;
       }
       if (deviceState==null) {
         this.emit(':tell',speechOutput);
       } else {
         AWSIoT.sendMessage(this, deviceState, speechOutput);
       }
+    },
+    'LockIntent': function () {
 
+      var speechOutput;
+      var itemSlot = this.event.request.intent.slots.DeviceState;
+      console.log("itemSlot: "+itemSlot);
+      var Device_States="none";
+      if (itemSlot && itemSlot.value) {
+          Device_States = itemSlot.value.toLowerCase();
+      }
+      console.log("Device_States: "+Device_States);
+      var deviceState=null;
 
+      switch (Device_States) {
+        case "none":
+        default:
+          speechOutput="ok, goodbye";
+          break;
+        case "kitchen cabinet":
+          blue_state = 0;
+          deviceState = [
+          {'state':{ 'desired':{'device':'NUC-Gateway','red_led':red_state,'blue_led':blue_state}}}
+          ];
+          speechOutput="kitchen cabinet now locked";
+          break;
+        case "laundry cabinet":
+          red_state = 0;
+          deviceState = [
+          {'state':{ 'desired':{'device':'NUC-Gateway','red_led':red_state,'blue_led':blue_state}}}
+          ];
+          speechOutput="laundry cabinet now locked";
+          break;
+      }
+      if (deviceState==null) {
+        this.emit(':tell', speechOutput);
+      } else {
+        AWSIoT.sendMessage(this, deviceState, speechOutput);
+      }
     },
     'AMAZON.HelpIntent': function () {
         this.attributes['speechOutput'] = 'You can ask questions such as, what\'s the device state, or, you can say exit... ' +
@@ -156,15 +160,11 @@ var AWSIoT = {
               console.log("update error: ");
               console.log(err);
               //Handle the error here
-              speechOutput = "error updating device state";
-              //thisOfParent.emit(':tell', speechOutput);
+              thisOfParent.emit(':tell', "error updating device state");
             }
-
             else {
               console.log("update success: ");
               console.log(data);
-              //callback(sessionAttributes,buildSpeechletResponse(intent.name, speechOutput, repromptText, shouldEndSession));
-              //thisOfParent.emit(':tell', speechOutput);
             }
           itemsProcessed++;
           if(itemsProcessed === array.length) {
