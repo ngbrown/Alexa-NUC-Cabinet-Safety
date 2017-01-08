@@ -1,0 +1,6 @@
+UnlockIntent unlock {DeviceState}
+UnlockIntent unlock the {DeviceState}
+UnlockIntent please unlock the {DeviceState}
+LockIntent lock {DeviceState}
+LockIntent lock the {DeviceState}
+LockIntent please lock the {DeviceState}

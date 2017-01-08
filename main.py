@@ -65,108 +65,12 @@ def internet_on():
         print "Connection Failed"
         return False
 
-
-def gettoken():
-    token = mc.get("access_token")
-    refresh = refresh_token
-    if token:
-        print 'returning refresh_token'
-        return token
-    elif refresh:
-        print 'getting new token'
-        payload = {"client_id" : Client_ID, "client_secret" : Client_Secret, "refresh_token" : refresh, "grant_type" : "refresh_token", }
-        url = "https://api.amazon.com/auth/o2/token"
-        r = requests.post(url, data = payload)
-        resp = json.loads(r.text)
-        print resp
-        mc.set("access_token", resp['access_token'], 3570)
-        return resp['access_token']
-    else:
-        print 'no tokens'
-        return False
-
-
-def alexa():
-    print 'alexa function called'
-    board.digital_write(LED_Status, 1)
-    url = 'https://access-alexa-na.amazon.com/v1/avs/speechrecognizer/recognize'
-    headers = {'Authorization' : 'Bearer %s' % gettoken()}
-    d = {
-        "messageHeader": {
-            "deviceContext": [
-                {
-                    "name": "playbackState",
-                    "namespace": "AudioPlayer",
-                    "payload": {
-                        "streamId": "",
-                            "offsetInMilliseconds": "0",
-                        "playerActivity": "IDLE"
-                    }
-                }
-            ]
-        },
-        "messageBody": {
-            "profile": "alexa-close-talk",
-            "locale": "en-us"#,
-#               "format": "audio/L16; rate=16000; channels=1"
-        }
-    }
-    with open(path+'recording.wav') as inf:
-        print 'with open recording.wav'
-        files = [
-                ('file', ('request', json.dumps(d), 'application/json; charset=UTF-8')),
-                ('file', ('audio', inf, 'audio/L16; rate=16000; channels=1'))
-                ]
-        r = requests.post(url, headers=headers, files=files)
-        print r.status_code
-    if r.status_code == 200:
-        print 'status code 200'
-        for v in r.headers['content-type'].split(";"):
-            if re.match('.*boundary.*', v):
-                print 'if re.match'
-                boundary =  v.split("=")[1]
-        data = r.content.split(boundary)
-        for d in data:
-            print 'for d in data'
-            if (len(d) >= 1024):
-                audio = d.split('\r\n\r\n')[1].rstrip('--')
-        with open(path+"response.mp3", 'wb') as f:
-            f.write(audio)
-        board.digital_write(LED_Record, 0)
-        os.system('mpg123 -q {}1sec.mp3 {}response.mp3'.format(path, path))
-        board.digital_write(LED_Status, 0)
-
-    else:
-        print 'else, no code 200'
-        board.digital_write(LED_Record, 0)
-        board.digital_write(LED_Status, 0)
-        for x in range(0, 3):
-            time.sleep(.2)
-            board.digital_write(LED_Record, 1)
-            time.sleep(.2)
-            board.digital_write(LED_Record, 0)
-            board.digital_write(LED_Status, 0)
-
-
-
-
 def start():
     recording = 0
     last = 0
     while True:
         val =  board.digital_read(Button)
-        if val == 1 and last == 0:
-            last = 1;
-            record = subprocess.Popen(['arecord', '-r', '16000', '-f', 'S16_LE', '--period-size', '500', '-c', '1', '-vv', 'recording.wav'])
-            recording = 1;
-            board.digital_write(LED_Record, 1)
-        elif val == 0 and recording == 1:
-            last = 0;
-            recording = 0;
-            record.kill()
-            board.digital_write(LED_Record, 0)
-            
-            alexa()
+        time.sleep(.01)
 
 
 if __name__ == "__main__":
@@ -174,11 +78,9 @@ if __name__ == "__main__":
     board.digital_write(LED_Status, 0)
     board.digital_write(LED_Record, 0)
     myMQTTClient.subscribe("$aws/things/NUC-Gateway/shadow/update/accepted", 1, customCallback)
-    
+
     while internet_on() == False:
         print "."
-    token = gettoken()
-    os.system('mpg123 -q {}1sec.mp3 {}hello.mp3'.format(path, path))
     for x in range(0, 3):
         time.sleep(.1)
         board.digital_write(LED_Status, 1)

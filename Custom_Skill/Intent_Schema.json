@@ -1,7 +1,16 @@
 {
   "intents": [
     {
-      "intent": "DeviceStateIntent",
+      "intent": "UnlockIntent",
+      "slots": [
+      {
+        "name" : "DeviceState",
+        "type": "Device_States"
+      }
+     ]
+    },
+    {
+      "intent": "LockIntent",
       "slots": [
       {
         "name" : "DeviceState",
